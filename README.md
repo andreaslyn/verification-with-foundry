@@ -167,7 +167,7 @@ The Foundry invariant test file [`test/AuctionManager.t.sol`](test/AuctionManage
 
 The Foundry invariant test contract `AuctionManagerTest` tells foundry to use 2 contracts for the invariant fuzzing campaign.
 
-1. An input contract to generate arbitrary inputs for function calls, and
+1. An input contract `AuctionManagerInput` to generate arbitrary inputs for function calls, and
 2. the `AuctionManagerHandler` contract.
 
 All tests are invariant tests from Foundry's point of view, even the tests for function properties. The input contract is used to generate arbitrary inputs for the function property tests as well as most of the tests for invariants.
