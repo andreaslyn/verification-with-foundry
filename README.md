@@ -33,9 +33,9 @@ The process for verifying a Solidity smart contract with Foundry Forge consists 
 3. A Foundry handler contract
 4. A Foundry invariant test contract
 
-For a medium sized contract ~500 lines of code, the process takes approximately 5 days to complete. The output of the process is a contract property specification together with a rigorous test implementation.
+For a medium sized contract ~500 lines of code without complex dependencies, the process takes approximately 5 days to complete. The output of the process is a contract property specification together with a test suite.
 
-Typically the time needed to complete a step increases with the amount of errors that are identified during the step. Errors are normally identified in each step, and errors of increasing complexity as the step number increases.
+Typically complex contract dependencies increase the time need to complete the process. The time needed to complete a step tends increase with the amount of errors that are identified during the step. Errors are can be identified in each step, and errors of increasing complexity as the step number increases.
 
 The following 4 subsections detail the steps one by one.
 
@@ -47,7 +47,7 @@ In this step I read the source code of the smart contract multiple times. In the
 
 ### 2. Invariants and function properties
 
-In this step a contract property specification if formulated. The purpose of the contract property specification is not to be a complete contract specification, but rather to document the invariants that are required for the contract to function as expected. Functions properties are also often present in the contract property specification, but the focus is on specifying the primary purpose of the contract's function, and not getting into too many internal details.
+In this step a contract property specification is formulated. The purpose of the contract property specification is not to be a complete contract specification, but rather to document the invariants that are required for the contract to function as expected. Functions properties are also often present in the contract property specification, but the focus is on specifying the primary purpose of the contract's function, and not getting into too many internal details.
 
 #### Property Specification of the `AuctionManager` Contract
 
