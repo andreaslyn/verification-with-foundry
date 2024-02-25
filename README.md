@@ -163,7 +163,7 @@ The `AuctionManagerHandler` contract has functions to generate arbitrary valid i
 
 ### 4. A Foundry invariant test contract
 
-The Foundry invariant test file [`test/AuctionManager.t.sol`](test/AuctionManager.t.sol) is using an [auction manager mock contract](`test/AuctionManagerMock.sol`), which is equivalent to `AuctionManager` except that it provides convenient access to some additional storage fields that we need for testing purposes.
+The Foundry invariant test file [`test/AuctionManager.t.sol`](test/AuctionManager.t.sol) is using an [auction manager mock contract](test/AuctionManagerMock.sol), which is equivalent to `AuctionManager` except that it provides convenient access to some additional storage fields that we need for testing purposes.
 
 The Foundry invariant test contract `AuctionManagerTest` tells foundry to use 2 contracts for the invariant fuzzing campaign.
 
