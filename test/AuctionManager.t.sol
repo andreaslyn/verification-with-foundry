@@ -233,6 +233,19 @@ contract AuctionManagerTest is Test {
         assertEq(newAmount, amount, "unexpected new best bid amount");
     }
 
+    function invariant_auctionBidReverts() external {
+        (address bidder, uint256 auctionId, uint256 amount) =
+            handler.prepare_auctionBid(input.arg(0), input.arg(1), input.arg(2));
+
+        (, uint256 prevAmount) = manager.bestBids(auctionId);
+
+        uint256 invalidAmount = prevAmount == 0 ? 0 : 1 + amount % prevAmount;
+
+        vm.expectRevert();
+        vm.prank(bidder);
+        manager.auctionBid(auctionId, invalidAmount);
+    }
+
     /// @notice Function properties of `settleAuction`
     function invariant_settleAuctionProperties() external {
         (address sender, uint256 auctionId) =
