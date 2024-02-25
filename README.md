@@ -1,6 +1,6 @@
 # Rigorous Solidity Smart Contract Verification with Foundry
 
-The purpose of this repository is to document my process for rigorous Solidity smart contract verification using [Foundry Forge](https://book.getfoundry.sh/forge/tests).
+The purpose of this repository is to document my process for rigorous Solidity smart contract verification using [Foundry Forge](https://book.getfoundry.sh/forge/tests). The process is inspired by my background as formal verification engineer and type theorist. The conclusion of the document explains why I refer to this process as "rigorous".
 
 I have used this process for verification of several real world smart contract protocols. I am documenting the process here, because it has been effective at identifying smart contract errors while being fast to implement.
 
@@ -51,15 +51,13 @@ In this step a contract property specification if formulated. The purpose of the
 
 #### Property Specification of the `AuctionManager` Contract
 
-The contract property specification of the `AuctionManager` case study contract. 
-
-We will use the following utility function to compute the minimum amount of `_token` ERC20 tokens required to settle the auctions,
+We will use the following utility function to compute the expected amount of `_token` ERC20 tokens in `AccountManager`,
 ```solidity
-function minTokenBalance(address _token) public view returns (uint256) {
+function tokenBalance(address _token) public view returns (uint256) {
     uint256 total;
     for (uint256 i; i < auctions.length; ++i) {
         if (bestBids[i].bidder == address(0))
-            continue; // This auction has been setteled
+            continue; // This auction has been settled
         if (auctions[i].itemToken == _token)
             total += auctions[i].amount;
         if (auctions[i].bidToken == _token)
@@ -71,11 +69,12 @@ function minTokenBalance(address _token) public view returns (uint256) {
 
 We will also use a utility function to compute the amount of ERC20 tokens expected to be deposited into to `AuctionManager` by a given user address,
 ```solidity
-function depositedTokenAmount(address _token, address _user) public view returns (uint256) {
+function depositedTokenAmount(address _token, address _user)
+public view returns (uint256) {
     uint256 total;
     for (uint256 i; i < auctions.length; ++i) {
         if (bestBids[i].bidder == address(0))
-            continue; // This auction has been setteled
+            continue; // This auction has been settled
         if (auctions[i].itemToken == _token && auctions[i].seller == _user)
             total += auctions[i].amount;
         if (auctions[i].bidToken == _token && bestBids[i].bidder == _user)
@@ -85,31 +84,31 @@ function depositedTokenAmount(address _token, address _user) public view returns
 }
 ```
 
-It is important to work on a high level of abstraction when specifying invariants and function properties. High level of abstraction allows for brevity while describing an essentially infinite number of scenarios.
+It is important to work on a high level of abstraction when specifying invariants and function properties. High level of abstraction allows for brevity while describing an essentially infinite number of scenarios. The focus is not having a strong collection of invariants, which allows to specify only a small number of function properties.
 
-**Invariants**
+##### Invariants
 
 There are as many best bids as there are auctions,
 > `auctions.length == bestBids.length`.
 
 All of the auction manager's token amounts are accounted (solvency),
-> For each `address t` which has been used as auction item token or auction bid token, `IERC20(t).balanceOf(address(this)) - minTokenBalance(t)` is constant and is `>=` 0.
-
-The auction manager is in possession of the tokens of the correct users,
-> For any `address a`, not equal to `address(this)` and for any ERC20 token `address t`, `IERC20(t).balanceOf(a) + depositedTokenAmount(t, a)` is a constant.
+> For each `address t` which is the address of an ERC20 token, `IERC20(t).balanceOf(address(this)) == tokenBalance(t)`.
 
 An auction can only be settled after the end time stamp,
-> For any `i < auctions.length`, if `bestBids[i].bidder == address(0)` then `auctions[i].endTime >= block.timestamp`.
+> For any `i < auctions.length`, if `bestBids[i].bidder == address(0)` then `auctions[i].endTime <= block.timestamp`.
 
-The best bid is lower bounded,
-> For any `i < auctions.length`, if `bestBids[i].bidder != auctions[i].seller` then `bestBids[i].amount >= auctions[i].minBidAmount`.
+For unsettled auction, if best bid is 0 then best bidder is the seller,
+> For any `i < auctions.length`, if `bestBids[i].amount == 0` and `bestBids[i].bidder != address(0)` then `bestBids[i].bidder == auctions[i].seller`.
+
+For unsettled auction, the best bid is lower bounded,
+> For any `i < auctions.length`, if `bestBids[i].bidder != address(0)` and either `bestBids[i].bidder != auctions[i].seller` or `bestBids[i].amount > 0`, then `bestBids[i].amount >= auctions[i].minBidAmount`.
 
 Auction info is constant,
 > For any `i < auctions.length`, the auction `auctions[i]` is a constant.
 
-**Function Properties**
+##### Function Properties
 
-A non-reverting call `openAuction(amount, itemToken, endTime, bidToken, minBidAmount)` pushes the auction
+A non-reverting call `openAuction(amount, itemToken, endTime, bidToken, minBidAmount)` pushes returns `auctions.length-1` the auction at index `auctions.length-1` is
 
 ```solidity
 Auction({
@@ -122,7 +121,7 @@ Auction({
 })
 ```
 
-and pushes the bid
+and the best bid at index `auctions.length-1` is
 
 ```solidity
 Bid({
@@ -131,17 +130,55 @@ Bid({
 })
 ```
 
-A non-reverting call `auctionBid(auctionId, amount)` updates the best bid
+Before calling `auctionBid`, let `prevBid = bestBids[auctionId]`. A non-reverting call `auctionBid(auctionId, amount)` updates the best bid
 
 ```
 bestBids[auctionId].bidder == msg.sender
 bestBids[auctionId].amount == amount
 ```
 
+If `prevBib.bidder != bestBids[auctionId].bidder` then `IERC20(auctions[auctionId].bidToken).balanceOf(prevBid.bidder)` is increased by `prevBid.amount`.
+
+If `prevBib.bidder == bestBids[auctionId].bidder` then `IERC20(auctions[auctionId].bidToken).balanceOf(prevBid.bidder)` is decreased by `bestBids[auctionId].amount - prevBid.amount`.
+
 The call `auctionBid(auctionId, amount)` reverts if `amount <= bestBids[auctionId].amount`.
 
-A non-reverting call `settleAuction(auctionId)` will update
+Before calling `settleAuction`, let `bid = bestBids[auctionId]`. A non-reverting call `settleAuction(auctionId)` will update
 
 ```
 bestBids[auctionId].bidder == address(0)
 ```
+
+and transfer `bid.amount` to `auctions[i].seller` and transfer `autions[i].amount` to `bid.bidder`.
+
+### 3. A Foundry handler contract
+
+The Foundry handler contract `AuctionManagerHandler` at [`test/AuctionManagerHandler.sol`](test/AuctionManagerHandler.sol) is responsible for generating inputs to test the `AuctionManager` contract. The Foundry handler contract is also used during the Foundry Forge invariant fuzzing campaign. The invariant fuzzing campaign will repeatedly bring the `AuctionManager` into an arbitrary state and run all of the tests in this arbitrary state. This allows us to avoid being scenario specific when testing.
+
+The `AuctionManagerHandler` contract has functions to generate arbitrary valid input to `openAuction`, `auctionBid` and `settleAuction`, which is used during the foundry invariant fuzzing campaign. The `AuctionManagerHandler` contract also specifies a function `fuzz_increaseTimestamp` to increase the block time stamp one in a white during the invariant fuzzing campaign, which is required for generically testing that auctions finish.
+
+### 4. A Foundry invariant test contract
+
+The Foundry invariant test file [`test/AuctionManager.t.sol`](test/AuctionManager.t.sol) is using an [accumulator mock contract](`test/AccumulatorMock.sol`), which is equivalent to `AuctionManager` except that it provides convenient access to some additional storage fields that we need for testing purposes.
+
+The Foundry invariant test tell foundry to use 2 contracts for the invariant fuzzing campaign.
+
+1. An input contract to generate arbitrary inputs for function calls, and
+2. the `AuctionManagerHandler` contract.
+
+All tests are invariant tests from Foundry's point of view, even the tests for function properties. The input contract is used to generate arbitrary inputs for the function property tests as well as most of the tests for invariants.
+
+The tests can be executed with the command
+```
+forge test
+```
+
+The tests are passing with `forge` version `forge 0.2.0 (ac80261 2024-02-24T00:17:06.154246094Z)`.
+
+## Conclusion
+
+The `AcutionManager` case study exemplifies the process for smart contract verification. We have developed a contract property specification and a corresponding test suite.
+
+I refer to this process as *rigorous*, because both the contract property specification and the test suite is working on a high level of abstraction, avoids being scenario specific. The way that the test suite is kept at a high level of abstraction is by having a Foundry handler contract to put the `AuctionManager` in arbitrary states and use an input contract to generate arbitrary function inputs.
+
+You may wonder why I am not using a formal verification tool like Certora. The formal verification tools that I have used for verifying smart contracts have limitations that often force me to write properties at a lower level of abstraction. While Certora may work well on the `AuctionManager` toy contract, for real world smart contracts it tends to struggle with the high level of abstraction that my contract property specifications are written in. With Foundry Forge I am able to write the tests using the same high level of abstraction as the contract property specification.

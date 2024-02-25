@@ -58,6 +58,8 @@ contract AuctionManager {
         address _bidToken,
         uint256 _minBidAmount
     ) external returns (uint256) {
+        require(_endTime > block.timestamp, "end time stamp cannot be in the past");
+
         address seller = msg.sender;
 
         // Receive the tokens from seller
@@ -97,7 +99,7 @@ contract AuctionManager {
 
         Bid memory bestBid = bestBids[_auctionId];
 
-        require(_amount > bestBid.amount, "bid is not increasing");
+        require(_amount > bestBid.amount, "bid is not higher than previous bid");
 
         // Transfer tokens back to the previous best bidder
         IERC20(auction.bidToken).transfer(
