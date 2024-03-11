@@ -1,6 +1,6 @@
 # Rigorous Solidity Smart Contract Verification with Foundry
 
-The purpose of this repository is to document my process for rigorous Solidity smart contract verification using [Foundry Forge](https://book.getfoundry.sh/forge/tests). The process is inspired by my background as formal verification engineer and type theorist. The conclusion of the document explains why I refer to this process as "rigorous".
+The purpose of this repository is to document my process for rigorous Solidity smart contract verification using [Foundry Forge](https://book.getfoundry.sh/forge/tests). The process is inspired by my background as formal verification engineer and type theorist. I refer to this process as rigorous, because the resulting tests are written with a high level of abstraction, avoids being scenario specific.
 
 I have used this process for verification of several real world smart contract protocols. I am documenting the process here, because it has been effective at identifying smart contract errors while being fast to implement.
 
@@ -8,9 +8,9 @@ I have used this process for verification of several real world smart contract p
 
 It is well known that errors in smart contracts can result in significant financial losses. Therefore, smart contract correctness is commonly of high priority, as such errors can significantly damage the reputation of responsible entities.
 
-The source code of a smart contract protocol is often small in size when compared to a traditional web2 backend system, which makes smart contract protocols an easier target for rigorous verification.
+The source code of a smart contract protocol is often small in size when compared to a traditional web2 backend system, which makes smart contract protocols an easier target for comprehensive verification.
 
-The high priority of correctness and small size of smart contract protocols make them well suited for formal verification and other rigorous verification techniques.
+The high priority of correctness and relatively small size of smart contract protocols make them well suited for formal verification and other rigorous verification techniques.
 
 ## Case Study
 
@@ -29,7 +29,7 @@ The Foundry Forge test for `AuctionManager` is located at [`test/AuctionManager.
 The process for verifying a Solidity smart contract with Foundry Forge consists of the following 4 steps.
 
 1. Code inspection of the smart contract
-2. Invariants and function properties
+2. A contract properties specification
 3. A Foundry handler contract
 4. A Foundry invariant test contract
 
@@ -45,9 +45,9 @@ This step is used to gather information about the smart contract with the aim of
 
 In this step I read the source code of the smart contract multiple times. In the first read I skim the contract and typically cover more details for each read.
 
-### 2. Invariants and function properties
+### 2. A contract properties specification
 
-In this step a contract property specification is formulated. The purpose of the contract property specification is not to be a complete contract specification, but rather to document the invariants that are required for the contract to function as expected. Function properties are also often present in the contract property specification, but the focus is on specifying the primary purpose of the contract's function, and not getting into too many internal details.
+In this step a contract property specification is formulated, for specifying invariants and function properties. The purpose of the contract property specification is not to be a complete contract specification, but rather to document the invariants that are required for the contract to function as expected. More specific function properties are also often present in the contract property specification, but the focus is on specifying the primary purpose of the contract functions, and not getting into too many internal details. This can commonly be achieved with strong invariants and a few quality function properties.
 
 #### Property Specification of the `AuctionManager` Contract
 
@@ -84,7 +84,7 @@ public view returns (uint256) {
 }
 ```
 
-It is important to work on a high level of abstraction when specifying invariants and function properties. High level of abstraction allows for brevity while describing an essentially infinite number of scenarios. The focus is on having a strong collection of invariants with a minimal number of key function properties.
+It is important to work on a high level of abstraction when specifying invariants and function properties. High level of abstraction allows for brevity while describing an essentially infinite number of scenarios. The focus is on having a strong collection of invariants and supplement with a minimal number of function properties.
 
 ##### Invariants
 
@@ -157,7 +157,7 @@ and transfer *bid.amount* to *auctions[i].seller* and transfer *autions[i].amoun
 
 ### 3. A Foundry handler contract
 
-The Foundry handler contract `AuctionManagerHandler` at [`test/AuctionManagerHandler.sol`](test/AuctionManagerHandler.sol) is responsible for generating inputs to test the `AuctionManager` contract. The Foundry handler contract is also used during the Foundry Forge invariant fuzzing campaign. The invariant fuzzing campaign will repeatedly bring the `AuctionManager` into an arbitrary state and run all of the tests in this arbitrary state. This allows us to avoid being scenario specific when testing.
+The Foundry handler contract `AuctionManagerHandler` at [`test/AuctionManagerHandler.sol`](test/AuctionManagerHandler.sol) is responsible for generating inputs to test the `AuctionManager` contract. The Foundry handler contract is also used during the Foundry Forge invariant fuzzing campaign. The invariant fuzzing campaign will repeatedly bring the `AuctionManager` into an arbitrary state and run all of the tests in this arbitrary state. This allows us to avoid being scenario specific when specifying tests.
 
 The `AuctionManagerHandler` contract has functions to generate arbitrary valid input to `openAuction`, `auctionBid` and `settleAuction`, which is used during the foundry invariant fuzzing campaign. The `AuctionManagerHandler` contract also specifies a function `fuzz_increaseTimestamp` to increase the block time stamp during the invariant fuzzing campaign, which is done because the `AuctionManager` contract depends on the block time stamp.
 
@@ -167,10 +167,10 @@ The Foundry invariant test file [`test/AuctionManager.t.sol`](test/AuctionManage
 
 The Foundry invariant test contract `AuctionManagerTest` tells foundry to use 2 contracts for the invariant fuzzing campaign.
 
-1. An input contract `AuctionManagerInput` to generate arbitrary inputs for function calls, and
+1. An input contract `AuctionManagerInput` to generate random values, and
 2. the `AuctionManagerHandler` contract.
 
-All tests are invariant tests from Foundry's point of view, even the tests for function properties. The input contract is used to generate arbitrary inputs for the function property tests as well as most of the tests for invariants.
+All tests are invariant tests from Foundry's point of view, even the tests for function properties. The input contract is used to obtain random inputs for the function property tests as well as most of the tests for invariants.
 
 The tests can be executed with the command
 ```
@@ -183,6 +183,6 @@ The tests are passing with `forge 0.2.0 (ac80261 2024-02-24T00:17:06.154246094Z)
 
 The `AcutionManager` case study exemplifies the process for smart contract verification. We have developed a contract property specification and a corresponding test suite.
 
-I refer to this process as *rigorous*, because both the contract property specification and the test suite is working on a high level of abstraction, avoids being scenario specific. The way that the test suite is kept at a high level of abstraction is by having a Foundry handler contract to put the `AuctionManager` in arbitrary states and use an input contract to generate arbitrary function inputs.
+I refer to this process as *rigorous*, because both the contract property specification and the test suite is working on a high level of abstraction, avoids being scenario specific. The way that the test suite is kept at a high level of abstraction is by having a Foundry handler contract to put the `AuctionManager` in arbitrary states and use an input contract to generate random test inputs.
 
-You may wonder why I am not using a formal verification tool like Certora. The formal verification tools that I have used for verifying smart contracts have limitations that often force me to write properties at a lower level of abstraction. While Certora may work well on the `AuctionManager` contract, for real world smart contracts it tends to struggle with the high level of abstraction that my contract property specifications are written in. I am more confident with using Foundry Forge for verification, because I am able to write the tests using the same high level of abstraction as the contract property specification.
+The formal verification tools that I have used for verifying smart contracts have limitations that often force me to write properties at a lower level of abstraction. While Certora may work well on the `AuctionManager` contract, for real world smart contracts it tends to struggle with the high level of abstraction that my contract property specifications are written in. I am more confident with using Foundry Forge for verification, because I am able to write the tests using the same high level of abstraction as the contract property specification.
