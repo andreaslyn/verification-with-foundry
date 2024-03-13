@@ -33,7 +33,7 @@ The process for verifying a Solidity smart contract with Foundry Forge consists 
 3. A Foundry handler contract
 4. A Foundry invariant test contract
 
-For a medium sized contract ~500 lines of code without complex dependencies, the process takes approximately 5 days to complete. The output of the process is a contract property specification together with a test suite.
+For a medium sized contract ~500 lines of code without complex dependencies, the process takes approximately 5 days to complete. The output of the process is a contract properties specification together with a test suite.
 
 Typically complex contract dependencies increase the time need to complete the process. The time needed to complete a step tends increase with the amount of errors that are identified during the step. Errors are can be identified in each step, and errors of increasing complexity as the step number increases.
 
@@ -41,119 +41,15 @@ The following 4 subsections detail the steps one by one.
 
 ### 1. Code inspection of the smart contract
 
-This step is used to gather information about the smart contract with the aim of getting the ability to formulate a contract property specification in the next step.
+This step is used to gather information about the smart contract with the aim of getting the ability to formulate a contract properties specification in the next step.
 
 In this step I read the source code of the smart contract multiple times. In the first read I skim the contract and typically cover more details for each read.
 
 ### 2. A contract properties specification
 
-In this step a contract property specification is formulated, for specifying invariants and function properties. The purpose of the contract property specification is not to be a complete contract specification, but rather to document the invariants that are required for the contract to function as expected. More specific function properties are also often present in the contract property specification, but the focus is on specifying the primary purpose of the contract functions, and not getting into too many internal details. This can commonly be achieved with strong invariants and a few quality function properties.
+In this step a contract properties specification is formulated, for specifying invariants and function properties. The purpose of the contract properties specification is not to be a complete contract specification, but rather to document the invariants that are required for the contract to function as expected. More specific function properties are also often present in the contract properties specification, but the focus is on specifying the primary purpose of the contract functions, and not getting into too many internal details. This can commonly be achieved with strong invariants and a few quality function properties.
 
-#### Property Specification of the `AuctionManager` Contract
-
-We will use the following utility function to compute the expected amount of `_token` ERC20 tokens in `AccountManager`,
-```solidity
-function tokenBalance(address _token) public view returns (uint256) {
-    uint256 total;
-    for (uint256 i; i < auctions.length; ++i) {
-        if (bestBids[i].bidder == address(0))
-            continue; // This auction has been settled
-        if (auctions[i].itemToken == _token)
-            total += auctions[i].amount;
-        if (auctions[i].bidToken == _token)
-            total += bestBids[i].amount;
-    }
-    return total;
-}
-```
-
-We will also use a utility function to compute the amount of ERC20 tokens expected to be deposited into to `AuctionManager` by a given user address,
-```solidity
-function depositedTokenAmount(address _token, address _user)
-public view returns (uint256) {
-    uint256 total;
-    for (uint256 i; i < auctions.length; ++i) {
-        if (bestBids[i].bidder == address(0))
-            continue; // This auction has been settled
-        if (auctions[i].itemToken == _token && auctions[i].seller == _user)
-            total += auctions[i].amount;
-        if (auctions[i].bidToken == _token && bestBids[i].bidder == _user)
-            total += bestBids[i].amount;
-    }
-    return total;
-}
-```
-
-It is important to work on a high level of abstraction when specifying invariants and function properties. High level of abstraction allows for brevity while describing an essentially infinite number of scenarios. The focus is on having a strong collection of invariants and supplement with a minimal number of function properties.
-
-##### Invariants
-
-There are as many best bids as there are auctions,
-> *auctions.length == bestBids.length*.
-
-All of the auction manager's token amounts are accounted (solvency),
-> For each *address t* which is the address of an ERC20 token, *IERC20(t).balanceOf(address(this)) == tokenBalance(t)*.
-
-An auction can only be settled after the end time stamp,
-> For any *i < auctions.length*, if *bestBids[i].bidder == address(0)* then *auctions[i].endTime <= block.timestamp*.
-
-For unsettled auction, if best bid is 0 then best bidder is the seller,
-> For any *i < auctions.length*, if *bestBids[i].amount == 0* and *bestBids[i].bidder != address(0)* then *bestBids[i].bidder == auctions[i].seller*.
-
-For unsettled auction, the best bid is lower bounded,
-> For any *i < auctions.length*, if *bestBids[i].bidder != address(0)* and either *bestBids[i].bidder != auctions[i].seller* or *bestBids[i].amount > 0*, then *bestBids[i].amount >= auctions[i].minBidAmount*.
-
-Auction info is constant,
-> For any *i < auctions.length*, the auction *auctions[i]* is a constant.
-
-##### Function Properties of *openAuction*
-
-A non-reverting call *openAuction(amount, itemToken, endTime, bidToken, minBidAmount)* returns *auctions.length-1* and the auction at index *auctions.length-1* is
-
-```solidity
-Auction({
-    seller: msg.sender,
-    amount: amount,
-    itemToken: itemToken,
-    endTime: endTime,
-    bidToken: bidToken,
-    minBidAmount: minBidAmount
-})
-```
-
-and the best bid at index *auctions.length-1* is
-
-```solidity
-Bid({
-    bidder: msg.sender,
-    amount: 0
-})
-```
-
-##### Function Properties of *auctionBid*
-
-Before calling *auctionBid*, let *prevBid = bestBids[auctionId]*. A non-reverting call *auctionBid(auctionId, amount)* updates the best bid
-
-```
-bestBids[auctionId].bidder == msg.sender
-bestBids[auctionId].amount == amount
-```
-
-If *prevBib.bidder != bestBids[auctionId].bidder* then *IERC20(auctions[auctionId].bidToken).balanceOf(prevBid.bidder)* is increased by *prevBid.amount*.
-
-If *prevBib.bidder == bestBids[auctionId].bidder* then *IERC20(auctions[auctionId].bidToken).balanceOf(prevBid.bidder)* is decreased by *bestBids[auctionId].amount - prevBid.amount*.
-
-The call *auctionBid(auctionId, amount)* reverts if *amount <= bestBids[auctionId].amount*.
-
-##### Function Properties of *settleAuction*
-
-Before calling *settleAuction*, let *bid = bestBids[auctionId]*. A non-reverting call *settleAuction(auctionId)* will update
-
-```
-bestBids[auctionId].bidder == address(0)
-```
-
-and transfer *bid.amount* to *auctions[i].seller* and transfer *autions[i].amount* to *bid.bidder*.
+Contract properties specification for the `AuctionManager` contract can be found here [`properties-spec/properties-spec.pdf`](properties-spec/properties-spec.pdf).
 
 ### 3. A Foundry handler contract
 
@@ -181,8 +77,8 @@ The tests are passing with `forge 0.2.0 (ac80261 2024-02-24T00:17:06.154246094Z)
 
 ## Conclusion
 
-The `AcutionManager` case study exemplifies the process for smart contract verification. We have developed a contract property specification and a corresponding test suite.
+The `AcutionManager` case study exemplifies the process for smart contract verification. We have developed a contract properties specification and a corresponding test suite.
 
-I refer to this process as *rigorous*, because both the contract property specification and the test suite is working on a high level of abstraction, avoids being scenario specific. The way that the test suite is kept at a high level of abstraction is by having a Foundry handler contract to put the `AuctionManager` in arbitrary states and use an input contract to generate random test inputs.
+I refer to this process as *rigorous*, because both the contract properties specification and the test suite is working on a high level of abstraction, avoids being scenario specific. The way that the test suite is kept at a high level of abstraction is by having a Foundry handler contract to put the `AuctionManager` in arbitrary states and use an input contract to generate random test inputs.
 
-The formal verification tools that I have used for verifying smart contracts have limitations that often force me to write properties at a lower level of abstraction. While Certora may work well on the `AuctionManager` contract, for real world smart contracts it tends to struggle with the high level of abstraction that my contract property specifications are written in. I am more confident with using Foundry Forge for verification, because I am able to write the tests using the same high level of abstraction as the contract property specification.
+The formal verification tools that I have used for verifying smart contracts have limitations that often force me to write properties at a lower level of abstraction. While Certora may work well on the `AuctionManager` contract, for real world smart contracts it tends to struggle with the high level of abstraction that my contract properties specifications are written in. I am more confident with using Foundry Forge for verification, because I am able to write the tests using the same high level of abstraction as the contract properties specification.

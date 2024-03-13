@@ -1,0 +1,173 @@
+\documentclass[a4paper,10pt]{article}
+
+\usepackage[margin=1.55in]{geometry} % Change margin.
+\usepackage[parfill]{parskip}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{listings}
+\usepackage{thmtools}
+\usepackage{color}
+\usepackage{listings}
+
+\input{math-config.tex}
+\input{lst-config.tex}
+
+\begin{document}
+
+\section*{Properties Specification of $\l{AuctionManager}$}
+
+This document specifies the invariants and function properties of the $\l{AuctionManager}$
+contract. Properties are written with a high level of abstraction, which allows for brevity while
+describing an essentially infinite number of scenarios. The focus is on having a strong collection
+of invariants and supplement with a minimal number of function properties.
+
+\subsection*{Utilities}
+We will use the $\l{tokenBalance}$ utility function to compute the expected amount of
+$\l{\_token}$ ERC20 tokens owned by the $\l{AccountManager}$ contract.
+
+\begin{lstlisting}
+function tokenBalance(address _token) public view returns (uint256) {
+    uint256 total;
+    for (uint256 i; i < auctions.length; ++i) {
+        if (bestBids[i].bidder == address(0))
+            continue; // This auction has been settled
+        if (auctions[i].itemToken == _token)
+            total += auctions[i].amount;
+        if (auctions[i].bidToken == _token)
+            total += bestBids[i].amount;
+    }
+    return total;
+}
+\end{lstlisting}
+
+The $\l{depositedTokenAmount}$ function will serve to compute the amount of ERC20 tokens
+expected to be deposited into to $\l{AuctionManager}$ by a given $\l{\_user}$ address.
+
+\begin{lstlisting}
+function depositedTokenAmount(address _token, address _user)
+public view returns (uint256) {
+    uint256 total;
+    for (uint256 i; i < auctions.length; ++i) {
+        if (bestBids[i].bidder == address(0))
+            continue; // This auction has been settled
+        if (auctions[i].itemToken == _token && auctions[i].seller == _user)
+            total += auctions[i].amount;
+        if (auctions[i].bidToken == _token && bestBids[i].bidder == _user)
+            total += bestBids[i].amount;
+    }
+    return total;
+}
+\end{lstlisting}
+
+\subsection*{Invariants}
+
+There are as many best bids as there are auctions,
+\begin{align*}
+\l{auctions.length} = \l{bestBids.length}\text{.}
+\end{align*}
+
+All of the auction manager token amounts are accounted for (solvency),
+\begin{align*}
+&\text{for each address $t$ which is the address of an ERC20 token, } \\
+&\l{IERC20}(t).\l{balanceOf}(\l{address}(\l{this})) = \l{tokenBalance}(t)\text{.}
+\end{align*}
+
+An auction can only be settled after the end time stamp,
+\begin{align*}
+&\text{for any $i < \l{auctions}.\l{length}$, if $\l{bestBids}[i].\l{bidder} = \l{address}(0)$ then} \\
+&\l{auctions}[i].\l{endTime} \le \l{block.timestamp}\text{.}
+\end{align*}
+
+For unsettled auction, if best bid is 0 then best bidder is the seller,
+\begin{align*}
+&\text{for any $i < \l{auctions}.\l{length}$,} \\
+&\text{if $\l{bestBids}[i].\l{amount} = 0$ and $\l{bestBids}[i].\l{bidder} \ne \l{address}(0)$ then} \\
+&\l{bestBids}[i].\l{bidder} = \l{auctions}[i].\l{seller}.
+\end{align*}
+
+For unsettled auction, the best bid is lower bounded,
+\begin{align*}
+&\text{for any $i < \l{auctions}.\l{length}$,} \\
+&\text{if $\l{bestBids}[i].\l{bidder} \ne \l{address}(0)$ and} \\
+&\text{either $\l{bestBids}[i].\l{bidder} \ne \l{auctions}[i].\l{seller}$ or $\l{bestBids}[i].\l{amount} > 0$, then} \\
+&\l{bestBids}[i].\l{amount} \ge \l{auctions}[i].\ge \l{minBidAmount}\text{.}
+\end{align*}
+
+Auction info is constant,
+\begin{align*}
+\text{for any $i < \l{auctions}.\l{length}$, the auction $\l{auctions}[i]$ is a constant.}
+\end{align*}
+
+\subsection*{Function Properties of $\l{openAuction}$}
+
+A non-reverting call
+\begin{align*}
+\l{openAuction}(\l{amount}, \l{itemToken}, \l{endTime}, \l{bidToken}, \l{minBidAmount})
+\end{align*}
+returns $\l{auctions}.\l{length}-1$ and the auction at index $\l{auctions}.\l{length}-1$ is
+
+\begin{lstlisting}
+Auction({
+    seller: msg.sender,
+    amount: amount,
+    itemToken: itemToken,
+    endTime: endTime,
+    bidToken: bidToken,
+    minBidAmount: minBidAmount
+})
+\end{lstlisting}
+and the best bid at index $\l{auctions}.\l{length}-1$ is
+\begin{lstlisting}
+Bid({
+    bidder: msg.sender,
+    amount: 0
+})
+\end{lstlisting}
+
+\subsection*{Function Properties of $\l{auctionBid}$}
+
+Before calling $\l{auctionBid}$, let $\l{prevBid} = \l{bestBids}[\l{auctionId}]$.
+
+A non-reverting
+call $\l{auctionBid}(\l{auctionId}, \l{amount})$ will update the state by
+\begin{itemize}
+\item Updating the best bid,
+\begin{align*}
+&\text{$\l{bestBids}[\l{auctionId}].\l{bidder} = \l{msg}.\l{sender}$ and} \\
+&\text{$\l{bestBids}[\l{auctionId}].\l{amount} = \l{amount}$}
+\end{align*}
+
+\item If $\l{prevBid}.\l{bidder} \ne \l{bestBids}[\l{auctionId}].\l{bidder}$ then
+\begin{align*}
+\l{auctions}[\l{auctionId}].\l{bidToken}.\l{balanceOf}(\l{prevBid}.\l{bidder})
+\end{align*}
+is increased by
+$\l{prevBid}.\l{amount}$.
+
+\item If $\l{prevBid}.\l{bidder} = \l{bestBids}[\l{auctionId}].\l{bidder}$ then
+\begin{align*}
+\l{auctions}[\l{auctionId}].\l{bidToken}.\l{balanceOf}(\l{prevBid}.\l{bidder})
+\end{align*}
+is decreased by $\l{bestBids}[\l{auctionId}].\l{amount} - \l{prevBid}.\l{amount}$.
+\end{itemize}
+
+\paragraph{}
+
+The call $\l{auctionBid}(\l{auctionId}, \l{amount})$ reverts if
+\begin{align*}
+\l{amount} \le \l{bestBids}[\l{auctionId}].\l{amount}\text{.}
+\end{align*}
+
+\subsection*{Function Properties of $\l{settleAuction}$}
+
+Before calling $\l{settleAuction}$, let $\l{bid} = \l{bestBids}[\l{auctionId}]$.
+
+A non-reverting call $\l{settleAuction}(\l{auctionId})$ will
+\begin{itemize}
+\item set $\l{bestBids}[\l{auctionId}].\l{bidder} = \l{address}(0)$
+\item transfer $\l{bid}.\l{amount}$ to $\l{auctions}[\l{auctionId}]$.$\l{seller}$ and transfer
+$\l{autions}[\l{auctionId}].\l{amount}$ to $\l{bid}.\l{bidder}$.
+\end{itemize}
+
+\end{document}

@@ -1,0 +1,58 @@
+
+\definecolor{list_blue_colour}{rgb}{0,0.2,0.60}
+\definecolor{lst_green_colour}{rgb}{0,0.25,0}
+\definecolor{lst_gray_colour}{rgb}{0.4,0.4,0.4}
+\definecolor{lst_yellow_colour}{rgb}{0.35,0.20,0}
+
+\lstdefinelanguage{solidity}{
+  keywords={},
+  otherkeywords = {},
+  keywords = {
+    function, public, view, returns, return, for, if, break, continue
+  },
+  keywords = [2]{
+    address, uint256
+  },
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]",
+}
+\lstset{
+  frame=tb,
+  language=solidity,
+  aboveskip=5pt,
+  belowskip=5pt,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  %numbers=left,
+  numberstyle=\footnotesize,
+  keywordstyle=[1]\color{list_blue_colour}\bfseries,
+  keywordstyle=[2]\color{lst_green_colour}\bfseries,
+  commentstyle=\color{lst_gray_colour},
+  stringstyle=\color{lst_yellow_colour},
+  frame=no,
+  breaklines=true,
+  breakatwhitespace=true
+  tabsize=2,
+  xleftmargin=.22in,
+  extendedchars=true,
+  %texcl=\true
+  mathescape=true
+}
+\lstset{literate=%
+{æ}{{\ae}}1
+{å}{{\aa}}1
+{ø}{{\o}}1
+{Æ}{{\AE}}1
+{Å}{{\AA}}1
+{Ø}{{\O}}1
+}
+
+\newcommand\fal{\textcolor{list_blue_colour}{{\prod}}}
+\newcommand\exi{\textcolor{list_blue_colour}{{\sum}}}
+\newcommand\fun{\textcolor{list_blue_colour}{\lambda}}
+\newcommand\inl{\lstinline}
+
+\def\l#1{\texttt{#1}}
