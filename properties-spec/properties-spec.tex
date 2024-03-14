@@ -18,9 +18,10 @@
 \section*{Properties Specification of $\l{AuctionManager}$}
 
 This document specifies the invariants and function properties of the $\l{AuctionManager}$
-contract. Properties are written with a high level of abstraction, which allows for brevity while
-describing an essentially infinite number of scenarios. The focus is on having a strong collection
-of invariants and supplement with a minimal number of function properties.
+contract. Properties are universally quantified by the state and additional variables,
+which allows for brevity while describing an essentially infinite number of scenarios.
+The focus is on having a strong collection of invariants and supplement with a small
+number of function properties.
 
 \subsection*{Utilities}
 We will use the $\l{tokenBalance}$ utility function to compute the expected amount of
@@ -105,8 +106,10 @@ A non-reverting call
 \begin{align*}
 \l{openAuction}(\l{amount}, \l{itemToken}, \l{endTime}, \l{bidToken}, \l{minBidAmount})
 \end{align*}
-returns $\l{auctions}.\l{length}-1$ and the auction at index $\l{auctions}.\l{length}-1$ is
+returns $\l{auctions}.\l{length}-1$ and the state is updated such that
 
+\begin{itemize}
+\item $\l{auctions}[\l{auctions}.\l{length}-1]$ is
 \begin{lstlisting}
 Auction({
     seller: msg.sender,
@@ -117,17 +120,23 @@ Auction({
     minBidAmount: minBidAmount
 })
 \end{lstlisting}
-and the best bid at index $\l{auctions}.\l{length}-1$ is
+\item $\l{bestBids}[\l{auctions}.\l{length}-1]$ is
 \begin{lstlisting}
 Bid({
     bidder: msg.sender,
     amount: 0
 })
 \end{lstlisting}
+\end{itemize}
 
 \subsection*{Function Properties of $\l{auctionBid}$}
 
 Before calling $\l{auctionBid}$, let $\l{prevBid} = \l{bestBids}[\l{auctionId}]$.
+
+The call $\l{auctionBid}(\l{auctionId}, \l{amount})$ reverts if
+\begin{align*}
+\l{amount} \le \l{bestBids}[\l{auctionId}].\l{amount}\text{.}
+\end{align*}
 
 A non-reverting
 call $\l{auctionBid}(\l{auctionId}, \l{amount})$ will update the state by
@@ -152,13 +161,6 @@ $\l{prevBid}.\l{amount}$.
 is decreased by $\l{bestBids}[\l{auctionId}].\l{amount} - \l{prevBid}.\l{amount}$.
 \end{itemize}
 
-\paragraph{}
-
-The call $\l{auctionBid}(\l{auctionId}, \l{amount})$ reverts if
-\begin{align*}
-\l{amount} \le \l{bestBids}[\l{auctionId}].\l{amount}\text{.}
-\end{align*}
-
 \subsection*{Function Properties of $\l{settleAuction}$}
 
 Before calling $\l{settleAuction}$, let $\l{bid} = \l{bestBids}[\l{auctionId}]$.
@@ -166,8 +168,10 @@ Before calling $\l{settleAuction}$, let $\l{bid} = \l{bestBids}[\l{auctionId}]$.
 A non-reverting call $\l{settleAuction}(\l{auctionId})$ will
 \begin{itemize}
 \item set $\l{bestBids}[\l{auctionId}].\l{bidder} = \l{address}(0)$
-\item transfer $\l{bid}.\l{amount}$ to $\l{auctions}[\l{auctionId}]$.$\l{seller}$ and transfer
-$\l{autions}[\l{auctionId}].\l{amount}$ to $\l{bid}.\l{bidder}$.
+\item transfer $\l{bid}.\l{amount}$ of $\l{auctions}[\l{auctionId}].\l{bidToken}$ \\
+to $\l{auctions}[\l{auctionId}]$.$\l{seller}$
+\item transfer $\l{auctions}[\l{auctionId}].\l{amount}$ of $\l{auctions}[\l{auctionId}].\l{itemToken}$ \\
+to $\l{bid}.\l{bidder}$.
 \end{itemize}
 
 \end{document}

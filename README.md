@@ -1,6 +1,6 @@
 # Rigorous Solidity Smart Contract Verification with Foundry
 
-The purpose of this repository is to document my process for rigorous Solidity smart contract verification using [Foundry Forge](https://book.getfoundry.sh/forge/tests). The process is inspired by my background as formal verification engineer and type theorist. I refer to this process as rigorous, because the resulting tests are written with a high level of abstraction, avoids being scenario specific.
+The purpose of this repository is to document my process for rigorous Solidity smart contract verification using [Foundry Forge](https://book.getfoundry.sh/forge/tests). The process is based on property based testing and touring-machine testing, and inspired by my background in type theory and formal verification. I refer to this process as rigorous, because the resulting tests are written with a high level of abstraction. All resulting tests are parametrised by the state and inputs, which allows for generality instead of testing specific scenarios.
 
 I have used this process for verification of several real world smart contract protocols. I am documenting the process here, because it has been effective at identifying smart contract errors while being fast to implement.
 
@@ -79,6 +79,6 @@ The tests are passing with `forge 0.2.0 (ac80261 2024-02-24T00:17:06.154246094Z)
 
 The `AcutionManager` case study exemplifies the process for smart contract verification. We have developed a contract properties specification and a corresponding test suite.
 
-I refer to this process as *rigorous*, because both the contract properties specification and the test suite is working on a high level of abstraction, avoids being scenario specific. The way that the test suite is kept at a high level of abstraction is by having a Foundry handler contract to put the `AuctionManager` in arbitrary states and use an input contract to generate random test inputs.
+I refer to this process as *rigorous*, because both the contract properties specification and the test suite is written in a high level of abstraction, parametrised by state and inputs, so avoids being scenario specific. The way that the test suite is kept at this high level of abstraction is by having a Foundry handler contract to put the `AuctionManager` in arbitrary states and use an input contract to generate random test inputs.
 
 The formal verification tools that I have used for verifying smart contracts have limitations that often force me to write properties at a lower level of abstraction. While Certora may work well on the `AuctionManager` contract, for real world smart contracts it tends to struggle with the high level of abstraction that my contract properties specifications are written in. I am more confident with using Foundry Forge for verification, because I am able to write the tests using the same high level of abstraction as the contract properties specification.
