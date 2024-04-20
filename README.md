@@ -1,6 +1,6 @@
 # Rigorous Solidity Smart Contract Verification with Foundry
 
-The purpose of this repository is to document my process for rigorous Solidity smart contract verification using [Foundry Forge](https://book.getfoundry.sh/forge/tests). The process is based on property based testing and touring-machine testing, and inspired by my background in type theory and formal verification. I refer to this process as rigorous, because the resulting tests are written with a high level of abstraction. All resulting tests are parametrised by the state and inputs, which allows for generality instead of testing specific scenarios.
+The purpose of this repository is to document my process for rigorous Solidity smart contract verification using [Foundry Forge](https://book.getfoundry.sh/forge/tests). The process is based on property based testing and state-machine testing, and inspired by my background in type theory and formal verification. I refer to this process as rigorous, because the resulting tests are written with a high level of abstraction. All resulting tests are parametrised by the state and inputs, which allows for generality instead of testing specific scenarios.
 
 I have used this process for verification of several real world smart contract protocols. I am documenting the process here, because it has been effective at identifying smart contract errors while being fast to implement.
 
