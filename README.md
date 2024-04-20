@@ -26,7 +26,7 @@ The Foundry Forge test for `AuctionManager` is located at [`test/AuctionManager.
 
 ## A Process for Rigorous Verification with Foundry
 
-The process for verifying a Solidity smart contract with Foundry Forge consists of the following 4 steps.
+The process for verifying a Solidity smart contract with Foundry Forge consists of the following 4 stages.
 
 1. Code inspection of the smart contract
 2. A contract properties specification
@@ -35,19 +35,19 @@ The process for verifying a Solidity smart contract with Foundry Forge consists 
 
 For a medium sized contract ~500 lines of code without complex dependencies, the process takes approximately 5 days to complete. The output of the process is a contract properties specification together with a test suite.
 
-Typically complex contract dependencies increase the time need to complete the process. The time needed to complete a step tends increase with the amount of errors that are identified during the step. Errors are can be identified in each step, and errors of increasing complexity as the step number increases.
+Typically complex contract dependencies increase the time need to complete the process. The time needed to complete a stage tends increase with the amount of errors that are identified. Errors are can be identified in each stage, and errors of increasing complexity as the stage number increases.
 
-The following 4 subsections detail the steps one by one.
+The following 4 subsections detail the stages one by one.
 
 ### 1. Code inspection of the smart contract
 
-This step is used to gather information about the smart contract with the aim of getting the ability to formulate a contract properties specification in the next step.
+This stage is used to gather information about the smart contract. The aim is to get an overview and identify internal contract assumptions, which will be used to formulate a contract properties specification in the next stage.
 
-In this step I read the source code of the smart contract multiple times. In the first read I skim the contract and typically cover more details for each read.
+In this stage I read the source code of the smart contract multiple times. In the first read I skim the contract and typically cover more details for each read.
 
 ### 2. A contract properties specification
 
-In this step a contract properties specification is formulated, for specifying invariants and function properties. The purpose of the contract properties specification is not to be a complete contract specification, but rather to document the invariants that are required for the contract to function as expected. More specific function properties are also often present in the contract properties specification, but the focus is on specifying the primary purpose of the contract functions, and not getting into too many internal details. This can commonly be achieved with strong invariants and a few quality function properties.
+In this stage a contract properties specification is formulated, for specifying invariants and function properties. The purpose of the contract properties specification is not to be a complete contract specification, but rather to document the invariants that are required for the contract to function as expected. More specific function properties are also often present in the contract properties specification, but the focus is on specifying the primary purpose of the contract functions, and not getting into too many internal details. This can commonly be achieved with strong invariants and a few quality function properties.
 
 Contract properties specification for the `AuctionManager` contract can be found here [`properties-spec/properties-spec.pdf`](properties-spec/properties-spec.pdf).
 
@@ -81,4 +81,4 @@ The `AcutionManager` case study exemplifies the process for smart contract verif
 
 I refer to this process as *rigorous*, because both the contract properties specification and the test suite is written in a high level of abstraction, parametrised by state and inputs, so avoids being scenario specific. The way that the test suite is kept at this high level of abstraction is by having a Foundry handler contract to put the `AuctionManager` in arbitrary states and use an input contract to generate random test inputs.
 
-The formal verification tools that I have used for verifying smart contracts have limitations that often force me to write properties at a lower level of abstraction. While Certora may work well on the `AuctionManager` contract, for real world smart contracts it tends to struggle with the high level of abstraction that my contract properties specifications are written in. I am more confident with using Foundry Forge for verification, because I am able to write the tests using the same high level of abstraction as the contract properties specification.
+The formal verification tools that I have used for verifying smart contracts have limitations that often force me to write properties at a lower level of abstraction. While SMT based tools like Certora may work well on the `AuctionManager` contract, for real world smart contracts they tend to struggle with the high level of abstraction that my contract properties specifications are written in. I am more confident with using Foundry Forge for verification, because I am able to write the tests using the same high level of abstraction as the contract properties specification.
